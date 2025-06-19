@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktives Arbeitsblatt: Einkaufen und Dienstleistungen</title>
+    
+    <!-- CSS eingebettet -->
+    <style>
+        :root {
+            --orange-bg: #fffaf0;
+            --orange-light: #ffe8cc;
+            --orange-medium: #ffb74d;
+            --orange-dark: #f57c00;
+            --orange-text: #bf360c;
+            --correct-color: #2e7d32;
+            --correct-bg: #e8f5e9;
+            --incorrect-color: #c62828;
+            --incorrect-bg: #ffebee;
+            --text-color: #333;
+            --border-color: #fdd835;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--orange-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        #worksheet-container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: var(--orange-text);
+            text-align: center;
+            margin-bottom: 2.5rem;
+            font-size: 2.5rem;
+        }
+
+        /* Container für jede einzelne Aufgabe */
+        .task-container {
+            background-color: #ffffff;
+            border: 2px solid var(--orange-light);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .task-container h2 {
+            color: var(--orange-dark);
+            border-bottom: 2px solid var(--orange-light);
+            padding-bottom: 0.75rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        /* Box für die ziehbaren Wörter */
+        .word-pool {
+            background-color: var(--orange-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 50px;
+            align-content: flex-start;
+        }
+
+        /* Die Wort-Kärtchen */
+        .word-item {
+            padding: 10px 18px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            cursor: grab;
+            user-select: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+            box-shadow: none;
+        }
+
+        /* Bereich mit den Ziel-Boxen */
+        .drop-zone-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        /* Einzelnes Ziel-Element (Symbol + Box) */
+        .drop-target {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .drop-target .symbol {
+            font-size: 2.5rem;
+            line-height: 1;
+            width: 45px; /* Feste Breite für bessere Ausrichtung */
+            text-align: center;
+        }
+        
+        /* Der "Abspiel"-Button für TTS */
+        .play-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--orange-medium);
+            transition: color 0.2s;
+            padding: 0 5px;
+        }
+        .play-btn:hover {
+            color: var(--orange-dark);
+        }
+
+        /* Die leere Box zum Ablegen */
+        .drop-box {
+            flex-grow: 1;
+            min-height: 52px;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        /* Visuelles Feedback beim Droppen */
+        .drop-box.drag-over {
+            background-color: var(--orange-light);
+            border-style: solid;
+            border-color: var(--orange-medium);
+        }
+        
+        /* Feedback-Styling nach Überprüfung */
+        .drop-box.correct {
+            border: 2px solid var(--correct-color);
+            background-color: var(--correct-bg);
+        }
+        .drop-box.incorrect {
+            border: 2px solid var(--incorrect-color);
+            background-color: var(--incorrect-bg);
+        }
+        .drop-box.correct .word-item,
+        .drop-box.incorrect .word-item {
+            cursor: default;
+        }
+
+        /* Die Steuerungs-Buttons pro Aufgabe */
+        .task-controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+
+        .task-controls button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .task-controls button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .task-controls button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .check-btn { background-color: var(--orange-medium); color: white; }
+        .reset-btn { background-color: #f0f0f0; color: var(--text-color); }
+        .solve-btn { background-color: var(--orange-dark); color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="worksheet-container">
+        <h1>Einkaufen & Dienstleistungen</h1>
+
+        <!-- Hier werden die Aufgaben dynamisch eingefügt -->
+        <div id="tasks-wrapper"></div>
+    </div>
+
+    <!-- Polyfill für Drag & Drop auf Touch-Geräten -->
+    <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.1/DragDropTouch.js"></script>
+
+    <!-- Vollständiges JavaScript eingebettet -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // 1. DATENSTRUKTUR: Aufgaben, Wörter und Emojis definieren
+        // WICHTIG: Die Betonungszeichen wurden entfernt, wie gefordert.
+        const tasksData = [
+            {
+                title: 'Aufgabe 1: Kleidung',
+                words: ['одежда', 'куртка', 'пальто', 'свитер', 'юбка', 'брюки', 'шарф', 'ботинки'],
+                mapping: {
+                    'одежда': '👕', 'куртка': '🧥', 'пальто': '🧥', 'свитер': '🧶',
+                    'юбка': '👗', 'брюки': '👖', 'шарф': '🧣', 'ботинки': '👢'
+                }
+            },
+            {
+                title: 'Aufgabe 2: Im Geschäft',
+                words: ['продукты', 'рынок', 'магазин', 'цвет', 'цена'],
+                mapping: {
+                    'продукты': '🛒', 'рынок': '🛍️', 'магазин': '🏪',
+                    'цвет': '🎨', 'цена': '🏷️'
+                }
+            },
+            {
+                title: 'Aufgabe 3: Post & Bank',
+                words: ['почта', 'банк', 'письмо', 'открытка', 'марка'],
+                mapping: {
+                    'почта': '📮', 'банк': '🏦', 'письмо': '✉️',
+                    'открытка': '🖼️', 'марка': '🎟️' // KORREKTUR: Ticket als bessere Abstraktion für Briefmarke
+                }
+            },
+            {
+                title: 'Aufgabe 4: Währung',
+                words: ['рубль', 'евро'],
+                mapping: {
+                    'рубль': '₽', // KORREKTUR: Korrektes Unicode-Symbol für Rubel
+                    'евро': '💶'  // KORREKTUR: Korrektes Emoji für Euro
+                }
+            }
+        ];
+
+        const tasksWrapper = document.getElementById('tasks-wrapper');
+        let draggedItem = null;
+
+        // 2. FUNKTIONEN ZUR DYNAMISCHEN ERSTELLUNG DER AUFGABEN
+
+        function createTaskElement(taskData, index) {
+            const taskContainer = document.createElement('div');
+            taskContainer.className = 'task-container';
+            taskContainer.id = `task-${index}`;
+
+            // Zufällig gemischte Wörter für den Pool
+            const shuffledWords = [...taskData.words].sort(() => Math.random() - 0.5);
+
+            taskContainer.innerHTML = `
+                <h2>${taskData.title}</h2>
+                <div class="word-pool">
+                    ${shuffledWords.map(word => `<div class="word-item" draggable="true">${word}</div>`).join('')}
+                </div>
+                <div class="drop-zone-area">
+                    ${taskData.words.map(word => `
+                        <div class="drop-target">
+                            <span class="symbol">${taskData.mapping[word]}</span>
+                            <button class="play-btn" data-word="${word}">▶️</button>
+                            <div class="drop-box" data-correct-word="${word}"></div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="task-controls">
+                    <button class="check-btn">Überprüfen</button>
+                    <button class="reset-btn">Zurücksetzen</button>
+                    <button class="solve-btn">Lösung anzeigen</button>
+                </div>
+            `;
+            return taskContainer;
+        }
+        
+        // 3. EVENT-HANDLER DEFINIEREN
+
+        // Drag & Drop
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('drop-box') && e.target.children.length === 0) {
+                e.target.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            if (e.target.classList.contains('drop-box')) {
+                e.target.classList.remove('drag-over');
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const dropBox = e.target.closest('.drop-box');
+            const wordPool = e.target.closest('.word-pool');
+
+            if (dropBox && dropBox.children.length === 0) {
+                dropBox.classList.remove('drag-over');
+                dropBox.appendChild(draggedItem);
+            } else if (wordPool) {
+                 // Erlaubt das Zurückziehen in den Pool
+                 wordPool.appendChild(draggedItem);
+            }
+        }
+
+        // Text-to-Speech (TTS)
+        function playWord(e) {
+            const word = e.target.dataset.word;
+            if (!word || !window.speechSynthesis) return;
+
+            // laufende Wiedergabe abbrechen, falls vorhanden
+            window.speechSynthesis.cancel(); 
+
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'ru-RU'; // Wichtig für die korrekte Aussprache
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Steuerungsknöpfe pro Aufgabe
+        function handleControls(e) {
+            const button = e.target;
+            const taskContainer = button.closest('.task-container');
+            if (!taskContainer) return;
+
+            if (button.classList.contains('check-btn')) checkTask(taskContainer);
+            if (button.classList.contains('reset-btn')) resetTask(taskContainer);
+            if (button.classList.contains('solve-btn')) solveTask(taskContainer);
+        }
+
+        // 4. LOGIK-FUNKTIONEN FÜR DIE BUTTONS
+
+        function checkTask(taskContainer) {
+            const dropBoxes = taskContainer.querySelectorAll('.drop-box');
+            dropBoxes.forEach(box => {
+                box.classList.remove('correct', 'incorrect'); // Reset previous feedback
+                const wordItem = box.querySelector('.word-item');
+                if (wordItem) {
+                    const droppedWord = wordItem.textContent;
+                    const correctWord = box.dataset.correctWord;
+                    if (droppedWord === correctWord) {
+                        box.classList.add('correct');
+                    } else {
+                        box.classList.add('incorrect');
+                    }
+                }
+            });
+        }
+
+        function resetTask(taskContainer) {
+            const wordPool = taskContainer.querySelector('.word-pool');
+            const dropBoxes = taskContainer.querySelectorAll('.drop-box');
+            
+            dropBoxes.forEach(box => {
+                box.classList.remove('correct', 'incorrect');
+                const wordItem = box.querySelector('.word-item');
+                if (wordItem) {
+                    wordPool.appendChild(wordItem);
+                    wordItem.setAttribute('draggable', 'true');
+                }
+            });
+             taskContainer.querySelectorAll('.task-controls button').forEach(b => b.disabled = false);
+        }
+
+        function solveTask(taskContainer) {
+            resetTask(taskContainer); // Erstmal alles aufräumen
+            const wordItems = Array.from(taskContainer.querySelectorAll('.word-item'));
+            const dropBoxes = taskContainer.querySelectorAll('.drop-box');
+
+            dropBoxes.forEach(box => {
+                const correctWord = box.dataset.correctWord;
+                const wordItemToMove = wordItems.find(item => item.textContent === correctWord);
+                if (wordItemToMove) {
+                    box.appendChild(wordItemToMove);
+                    box.classList.add('correct');
+                    wordItemToMove.setAttribute('draggable', 'false');
+                }
+            });
+
+            // Restliche Wörter im Pool lassen, Buttons deaktivieren
+            taskContainer.querySelectorAll('.check-btn, .solve-btn').forEach(b => b.disabled = true);
+        }
+
+
+        // 5. INITIALISIERUNG: Aufgaben erstellen und Event Listener hinzufügen
+        
+        tasksData.forEach((data, index) => {
+            const taskElement = createTaskElement(data, index);
+            tasksWrapper.appendChild(taskElement);
+
+            // Globale Event Listener mit Delegation für Effizienz
+            taskElement.addEventListener('dragstart', handleDragStart);
+            taskElement.addEventListener('dragend', handleDragEnd);
+            taskElement.addEventListener('dragover', handleDragOver);
+            taskElement.addEventListener('dragenter', handleDragEnter);
+            taskElement.addEventListener('dragleave', handleDragLeave);
+            taskElement.addEventListener('drop', handleDrop);
+            taskElement.addEventListener('click', (e) => {
+                if (e.target.matches('.play-btn')) playWord(e);
+                if (e.target.closest('.task-controls')) handleControls(e);
+            });
+        });
+    });
+    </script>
+
+</body>
+</html>
